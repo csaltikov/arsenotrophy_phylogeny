@@ -8,7 +8,6 @@ library(ggnewscale)
 library(ggpubr)
 library(ggtext)
 library(ggstar)
-#library(tidytree)
 
 here()
 
@@ -39,8 +38,8 @@ if (!is.null(d1)) {
 }
 
 # Read in metadata ----
-meta_file <- "table_S2_SuppInfoFigure07.xlsx"
-annotations <- read_xlsx(path = here("data", meta_file))
+meta_file <- "Figure07_SuppInfo.csv"
+annotations <- read_csv(file = here("data", meta_file))
 
 
 str(tree$tip.label)
@@ -59,7 +58,7 @@ tree_data_annotations <-
   right_join(tree_data, annotations,  by = c("label" = "name")) %>%
   mutate(short_name = paste0(short_name, sep = " ", number)) %>%
   column_to_rownames("label") %>%
-  replace_na(list(Oxygen = "unknown", Water = "unknown")) %>%
+  replace_na(list(Oxygen = "Unknown", Water = "other")) %>%
   select(-tip_id, -gene_JGI_protein_NCBI, -amino_acid_sequence)
 
 # Prepare annotations for geom_fruit ----
@@ -71,8 +70,9 @@ tree_data_annotations_fruit <- tree_data_annotations %>%
   mutate(Arsenotrophy = factor(Arsenotrophy, levels = c(0,1,2,3)),
          taxonomy = as.factor(taxonomy),
          metagenome = as.factor(metagenome),
-         Oxygen = factor(x=Oxygen, levels = c("aerobic", "micro", "anaerobic", "unknown")),
-         Water = factor(x=Water, levels = c("freshwater","hot spring", "saline", "wastewater", "unknown")),
+         Oxygen = factor(x=Oxygen, levels = c("aerobic", "micro", "anaerobic", "Unknown")),
+         Water = factor(x=Water, levels = c("freshwater","hot spring", "saline", "wastewater", "other")),
+         env = factor(x=env, levels = c("aquatic",  "microbial mat",  "sediment", "soil","wastewater")),
          bar = 1) %>%
   rownames_to_column(var="ID") %>%
   select(-number)
@@ -82,13 +82,6 @@ tree_data_annotations_labels <- tree_data_annotations %>%
   select(node, short_name, taxonomy) %>%
   rename(tax = taxonomy,
          shortname = short_name)
-
-# Save tree data, this includes the node labels both terminal and internal labels
-#table_out <- "table_S2.csv"
-#tree_data_annotations_labels %>%
-#  rownames_to_column("tip.label") %>%
-#  write.csv(., file = here(here("data", table_out)), row.names = FALSE)
-
 
 # Draw the tree ----
 g1 <- ggtree(tree, size=.25) %<+% tree_data_annotations_labels +
@@ -165,36 +158,36 @@ g3 <- g2 + new_scale_fill() +
                        guide=guide_legend(keywidth=0.7, keyheight=.6, order=3,
                                           override.aes=list(size=0.25))
   )
+# Making another geom_fruit with the Oxygen metadata
+# g4 <- g3 + new_scale_fill() +
+#   geom_fruit(
+#     data = tree_data_annotations_fruit,
+#     geom = geom_bar,
+#     mapping = aes(y=ID, x=bar, fill=Oxygen),
+#     orientation="y",
+#     stat="identity",
+#     color="white",
+#     pwidth=0.1,
+#     axis.params = list(axis="x", title="Oxygen", title.angle=90)
+#   ) +
+#   scale_fill_manual(name="Oxygen",
+#                        values = c("grey10", "grey60", "grey80", "grey95"),
+#                        guide=guide_legend(keywidth=0.7, keyheight=.6, order=4,
+#                                           override.aes=list(size=0.25))
+#   )
 # set a new scale fill before making another geom_fruit
-g4 <- g3 + new_scale_fill() +
+g5 <- g3 + new_scale_fill() +
   geom_fruit(
     data = tree_data_annotations_fruit,
     geom = geom_bar,
-    mapping = aes(y=ID, x=bar, fill=Oxygen),
+    mapping = aes(y=ID, x=bar, fill=env),
     orientation="y",
     stat="identity",
     color="white",
     pwidth=0.1,
-    axis.params = list(axis="x", title="Oxygen", title.angle=90)
+    axis.params = list(axis="x", title="Environment", title.angle=90)
   ) +
-  scale_fill_manual(name="Oxygen",
-                       values = c("grey10", "grey60", "grey80", "grey95"),
-                       guide=guide_legend(keywidth=0.7, keyheight=.6, order=4,
-                                          override.aes=list(size=0.25))
-  )
-# set a new scale fill before making another geom_fruit
-g5 <- g4 + new_scale_fill() +
-  geom_fruit(
-    data = tree_data_annotations_fruit,
-    geom = geom_bar,
-    mapping = aes(y=ID, x=bar, fill=Water),
-    orientation="y",
-    stat="identity",
-    color="white",
-    pwidth=0.1,
-    axis.params = list(axis="x", title="Water", title.angle=90)
-  ) +
-  scale_fill_manual(name="Water",
+  scale_fill_manual(name="Environment",
                     values = c("#56B4E9", "#CC79A7", "#E69F00", "#009E73", "grey95"),
                     guide=guide_legend(keywidth=0.7, keyheight=.6, order=5,
                                        override.aes=list(size=0.25))
@@ -210,4 +203,4 @@ g6 <- g5 + theme(legend.text=element_text(size=7),
 g6
 
 # Print/save tree ----
-ggsave(filename = here("results/figure_7_ORIO_genome_paper.svg"), plot=g6, height = 6.5, width = 5)
+ggsave(filename = here("results/figure_7_ORIO_genome_paper.svg"), plot=g6, height = 6.5, width = 4.7)
